@@ -67,6 +67,7 @@ class EmailNotifier:
                 server.sendmail(self.email_user, recipients, msg.as_string())
             
             print(f"Successfully sent notification to {len(recipients)} recipients: {', '.join(recipients)}")
+            print(f"Total posts notified: {total_count} (KOFAIR: {len(kofair_posts)}, MSS: {len(mss_posts)})")
             return True
         except Exception as e:
             print(f"FAILED to send email: {e}")

@@ -1,5 +1,6 @@
 import os
 import json
+import sys
 from crawler import KofairCrawler, MssCrawler
 from notifier import EmailNotifier
 
@@ -82,8 +83,14 @@ def main():
         print(f"- [{post['source']}] {post['title']} ({post['url']})")
     
     # Always send daily status
-    notifier.send_notification(kofair_new, mss_new)
+    success = notifier.send_notification(kofair_new, mss_new)
+    
+    if not success:
+        print("CRITICAL: Notification failed to send.")
+        sys.exit(1)
+        
     save_last_ids(last_ids)
+    print("Process completed successfully.")
 
 if __name__ == "__main__":
     main()
