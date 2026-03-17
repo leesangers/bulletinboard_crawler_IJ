@@ -63,14 +63,15 @@ class EmailNotifier:
             with smtplib.SMTP(self.smtp_server, self.port) as server:
                 server.starttls()
                 server.login(self.email_user, self.email_pw)
-                # Loop through recipients to send individually or pass the list
-                # Most modern SMTP servers handle the list or comma-separated string in send_message correctly
-                server.send_message(msg)
+                # Ensure we send to all recipients explicitly
+                server.sendmail(self.email_user, recipients, msg.as_string())
             
-            print(f"Notification sent to {', '.join(recipients)}")
+            print(f"Successfully sent notification to {len(recipients)} recipients: {', '.join(recipients)}")
             return True
         except Exception as e:
-            print(f"Error sending email: {e}")
+            print(f"FAILED to send email: {e}")
+            import traceback
+            traceback.print_exc()
             return False
 
 if __name__ == "__main__":
@@ -81,4 +82,4 @@ if __name__ == "__main__":
     ]
     # Set dummy env vars for local test if needed (DO NOT COMMIT SECRETS)
     notifier = EmailNotifier()
-    notifier.send_notification(test_posts)
+    notifier.send_notification(test_posts, [])
