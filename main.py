@@ -60,6 +60,7 @@ def main():
         for post in new_posts:
             if any(kw in post["title"] for kw in keywords):
                 post["title"] = f"★[중점] {post['title']}"
+            print(f"- {post['title']} ({post['url']})")
         
         notifier.send_notification(new_posts)
     else:

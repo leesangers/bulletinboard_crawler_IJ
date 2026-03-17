@@ -35,7 +35,8 @@ class EmailNotifier:
             html += "<thead><tr style='background-color: #f2f2f2;'><th>번호</th><th>제목</th><th>등록일</th></tr></thead>"
             html += "<tbody>"
             for post in new_posts:
-                html += f"<tr><td>{post['id']}</td><td><a href='{post['url']}'>{post['title']}</a></td><td>{post['date']}</td></tr>"
+                link_style = "color: #1a73e8; text-decoration: none; font-weight: bold;"
+                html += f"<tr><td>{post['id']}</td><td><a href='{post['url']}' style='{link_style}'>{post['title']}</a></td><td>{post['date']}</td></tr>"
             html += "</tbody></table>"
             html += "<p style='color: grey;'>본 메일은 자동 발송되었습니다.</p>"
 
