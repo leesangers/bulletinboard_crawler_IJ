@@ -15,15 +15,19 @@ class EmailNotifier:
         """
         Sends an email notification with the list of new posts, split by source.
         Always sends even if no new posts are found.
+        Supports multiple recipients via comma-separated RECIPIENT_EMAIL.
         """
         if not self.email_user or not self.email_pw or not self.recipient_email:
             print("Email credentials or recipient not configured in environment variables.")
             return False
 
+        # Handle multiple recipients
+        recipients = [r.strip() for r in self.recipient_email.split(",") if r.strip()]
+
         try:
             msg = MIMEMultipart()
             msg["From"] = self.email_user
-            msg["To"] = self.recipient_email
+            msg["To"] = ", ".join(recipients)
             
             total_count = len(kofair_posts) + len(mss_posts)
             if total_count > 0:
@@ -59,9 +63,11 @@ class EmailNotifier:
             with smtplib.SMTP(self.smtp_server, self.port) as server:
                 server.starttls()
                 server.login(self.email_user, self.email_pw)
+                # Loop through recipients to send individually or pass the list
+                # Most modern SMTP servers handle the list or comma-separated string in send_message correctly
                 server.send_message(msg)
             
-            print(f"Notification sent to {self.recipient_email}")
+            print(f"Notification sent to {', '.join(recipients)}")
             return True
         except Exception as e:
             print(f"Error sending email: {e}")
