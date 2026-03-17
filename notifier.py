@@ -1,0 +1,63 @@
+import smtplib
+from email.mime.text import MIMEText
+from email.mime.multipart import MIMEMultipart
+import os
+
+class EmailNotifier:
+    def __init__(self, smtp_server="smtp.gmail.com", port=587):
+        self.smtp_server = smtp_server
+        self.port = port
+        self.email_user = os.getenv("EMAIL_USER")
+        self.email_pw = os.getenv("EMAIL_APP_PASSWORD")
+        self.recipient_email = os.getenv("RECIPIENT_EMAIL")
+
+    def send_notification(self, new_posts):
+        """
+        Sends an email notification with the list of new posts.
+        """
+        if not new_posts:
+            print("No new posts to notify.")
+            return False
+
+        if not self.email_user or not self.email_pw or not self.recipient_email:
+            print("Email credentials or recipient not configured in environment variables.")
+            return False
+
+        try:
+            msg = MIMEMultipart()
+            msg["From"] = self.email_user
+            msg["To"] = self.recipient_email
+            msg["Subject"] = f"[KOFAIR] 신규 게시물 알림 ({len(new_posts)}건)"
+
+            # HTML body
+            html = "<h3>KOFAIR 게시판 신규 등록 게시물 리스트</h3>"
+            html += "<table border='1' cellpadding='5' style='border-collapse: collapse;'>"
+            html += "<thead><tr style='background-color: #f2f2f2;'><th>번호</th><th>제목</th><th>등록일</th></tr></thead>"
+            html += "<tbody>"
+            for post in new_posts:
+                html += f"<tr><td>{post['id']}</td><td><a href='{post['url']}'>{post['title']}</a></td><td>{post['date']}</td></tr>"
+            html += "</tbody></table>"
+            html += "<p style='color: grey;'>본 메일은 자동 발송되었습니다.</p>"
+
+            msg.attach(MIMEText(html, "html"))
+
+            with smtplib.SMTP(self.smtp_server, self.port) as server:
+                server.starttls()
+                server.login(self.email_user, self.email_pw)
+                server.send_message(msg)
+            
+            print(f"Notification sent to {self.recipient_email}")
+            return True
+        except Exception as e:
+            print(f"Error sending email: {e}")
+            return False
+
+if __name__ == "__main__":
+    # Test block
+    test_posts = [
+        {"id": "test1", "title": "Test Title 1", "date": "2024-03-17", "url": "https://example.com/1"},
+        {"id": "test2", "title": "Test Title 2", "date": "2024-03-17", "url": "https://example.com/2"}
+    ]
+    # Set dummy env vars for local test if needed (DO NOT COMMIT SECRETS)
+    notifier = EmailNotifier()
+    notifier.send_notification(test_posts)
