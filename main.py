@@ -32,9 +32,10 @@ def save_last_ids(ids_dict):
 def main():
     print("Starting Bulletin Board Monitor (KOFAIR & MSS)...")
     
-    # Initialize crawlers: (instance, state_key)
+    # 1. Initialize Crawlers
     crawler_configs = [
-        (KofairCrawler(), "kofair"),
+        (KofairCrawler("000063"), "kofair_notice"), # CP 안내
+        (KofairCrawler("000064"), "kofair_bid"),    # CP 자료실
         (MssCrawler(), "mss")
     ]
     notifier = EmailNotifier()
@@ -69,7 +70,8 @@ def main():
 
     # 3. Process and Notify (Always)
     print("Preparing notification...")
-    kofair_new = results.get("kofair", [])
+    # Consolidate KOFAIR boards for the email section
+    kofair_new = results.get("kofair_notice", []) + results.get("kofair_bid", [])
     mss_new = results.get("mss", [])
     
     # Filter logic (stars for keywords)
