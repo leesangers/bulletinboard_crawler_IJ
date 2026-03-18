@@ -1,13 +1,12 @@
-name: Bulletin Board Monitor
+name: Bulletin Board Crawler Service
 
 on:
   schedule:
-    # 10:04 AM KST is 01:04 UTC
-    # 01:05 PM KST is 04:05 UTC
-    # 02:41 PM KST is 05:41 UTC
-    - cron: '4 1 * * *'
-    - cron: '5 4 * * *'
-    - cron: '41 5 * * *'
+    - cron: '0 0 * * *'  # 09:00 AM KST
+    - cron: '30 5 * * *' # 14:30 PM KST (Final target)
+  push:
+    branches:
+      - main
   workflow_dispatch: {}
 
 jobs:
@@ -40,6 +39,7 @@ jobs:
           RECIPIENT_EMAIL: ${{ secrets.RECIPIENT_EMAIL }}
         run: python main.py
 
+      # Using [skip ci] logic to avoid infinite loops on push
       - name: Commit and Push last_ids.json
         run: |
           git config --global user.name "github-actions[bot]"
