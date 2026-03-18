@@ -1,6 +1,10 @@
 import requests
+from requests.adapters import HTTPAdapter
+from urllib3.util.retry import Retry
 from bs4 import BeautifulSoup
 import re
+import time
+import random
 
 class KofairCrawler:
     BASE_URL = "https://www.kofair.or.kr"
@@ -58,13 +62,23 @@ class MssCrawler:
 
     def __init__(self):
         self.headers = {
-            "User-Agent": "Mozilla/5.0 (Windows NT 10.0; Win64; x64) AppleWebKit/537.36 (KHTML, like Gecko) Chrome/120.0.0.0 Safari/537.36",
-            "Accept": "text/html,application/xhtml+xml,application/xml;q=0.9,image/avif,image/webp,image/apng,*/*;q=0.8,application/signed-exchange;v=b3;q=0.7",
+            "User-Agent": "Mozilla/5.0 (Windows NT 10.0; Win64; x64) AppleWebKit/537.36 (KHTML, like Gecko) Chrome/124.0.0.0 Safari/537.36",
+            "Accept": "text/html,application/xhtml+xml,application/xml;q=0.9,image/avif,image/webp,image/apng,*/*;q=0.8",
             "Accept-Language": "ko-KR,ko;q=0.9,en-US;q=0.8,en;q=0.7",
-            "Referer": "https://www.mss.go.kr/site/smba/ex/bbs/List.do?cbIdx=310",
+            "Referer": "https://www.google.com/",
             "Cache-Control": "max-age=0",
-            "Connection": "keep-alive"
+            "Connection": "keep-alive",
+            "Upgrade-Insecure-Requests": "1"
         }
+        self.session = requests.Session()
+        retry_strategy = Retry(
+            total=3,
+            backoff_factor=2,
+            status_forcelist=[429, 500, 502, 503, 504],
+        )
+        adapter = HTTPAdapter(max_retries=retry_strategy)
+        self.session.mount("https://", adapter)
+        self.session.mount("http://", adapter)
 
     def fetch_posts(self):
         """
@@ -72,7 +86,10 @@ class MssCrawler:
         Returns a list of dictionaries containing post info.
         """
         try:
-            response = requests.get(self.LIST_URL, headers=self.headers, timeout=15)
+            # Add a small random delay to avoid bot detection patterns
+            time.sleep(random.uniform(1, 4))
+            
+            response = self.session.get(self.LIST_URL, headers=self.headers, timeout=20)
             response.raise_for_status()
             
             soup = BeautifulSoup(response.text, "html.parser")
