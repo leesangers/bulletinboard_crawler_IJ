@@ -27,7 +27,7 @@ class EmailNotifier:
         try:
             msg = MIMEMultipart()
             msg["From"] = self.email_user
-            msg["To"] = ", ".join(recipients)
+            msg["To"] = self.email_user  # Set To as sender for BCC-style sending
             
             total_count = len(kofair_posts) + len(mss_posts)
             if total_count > 0:
