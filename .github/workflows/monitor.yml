@@ -2,8 +2,12 @@ name: Bulletin Board Monitor
 
 on:
   schedule:
-    - cron: '0 0 * * *'  # 09:00 AM KST
-    - cron: '30 5 * * *' # 02:30 PM KST
+    # 10:04 AM KST is 01:04 UTC
+    # 01:05 PM KST is 04:05 UTC
+    # 02:41 PM KST is 05:41 UTC
+    - cron: '4 1 * * *'
+    - cron: '5 4 * * *'
+    - cron: '41 5 * * *'
   workflow_dispatch: {}
 
 jobs:
