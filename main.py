@@ -7,7 +7,18 @@ import json
 import sys
 
 STATE_FILE = "last_ids.json"
-LOOKBACK_DAYS = 10
+
+def get_lookback_days():
+    """
+    Monday (0), Sunday (6), Saturday (5) -> 3 days
+    Other days -> 1 day
+    """
+    weekday = datetime.now().weekday()
+    if weekday in [0, 5, 6]:
+        return 3
+    return 1
+
+LOOKBACK_DAYS = get_lookback_days()
 
 FDA_RSS_URL = "https://www.fda.gov/about-fda/contact-fda/stay-informed/rss-feeds/press-releases/rss.xml"
 MFDS_RSS_URL = "http://www.mfds.go.kr/www/rss/brd.do?brdId=ntc0004"

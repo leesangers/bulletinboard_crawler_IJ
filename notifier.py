@@ -14,15 +14,24 @@ class EmailNotifier:
 
     def send_notification(self, posts, fda_error=False):
         """
-        Sends an email with new FDA press announcements.
-        Always sends even when there are no new posts.
-        Supports multiple recipients via comma-separated RECIPIENT_EMAIL.
+        Sends an email with new press announcements.
+        Groups posts by source and creates separate tables.
         """
         if not self.email_user or not self.email_pw or not self.recipient_email:
             print("Email credentials or recipient not configured in environment variables.")
             return False
 
         recipients = [r.strip() for r in self.recipient_email.split(",") if r.strip()]
+
+        # Group posts by source
+        sources = ["FDA", "MFDS"]
+        grouped_posts = {s: [] for s in sources}
+        if posts:
+            for p in posts:
+                s = p["source"]
+                if s not in grouped_posts:
+                    grouped_posts[s] = []
+                grouped_posts[s].append(p)
 
         try:
             msg = MIMEMultipart()
@@ -36,28 +45,35 @@ class EmailNotifier:
             else:
                 msg["Subject"] = "[Alert] No new press announcements"
 
-            html = "<h2>FDA Press Announcements Monitor</h2>"
+            html = "<h2>Press Announcements Monitor</h2>"
 
             if fda_error:
                 html += "<p style='color: #d93025; font-weight: bold;'>⚠️ Failed to fetch data from the RSS feeds. Please check the crawler.</p>"
             elif not posts:
-                html += "<p style='color: #70757a;'>No new press announcements in the last 10 days.</p>"
+                html += "<p style='color: #70757a;'>No new press announcements in the requested period.</p>"
             else:
-                html += "<table border='1' cellpadding='8' style='border-collapse: collapse; width: 100%; font-size: 14px;'>"
-                html += "<thead><tr style='background-color: #f2f2f2;'><th style='width:80px;'>Source</th><th style='width:110px;'>Date</th><th>Title</th><th>Link</th></tr></thead>"
-                html += "<tbody>"
-                for post in posts:
-                    html += (
-                        f"<tr>"
-                        f"<td style='text-align: center;'>{post['source']}</td>"
-                        f"<td style='white-space: nowrap; text-align: center;'>{post['date']}</td>"
-                        f"<td>{post['title']}</td>"
-                        f"<td style='text-align: center;'><a href='{post['url']}' style='color: #1a73e8;'>바로가기</a></td>"
-                        f"</tr>"
-                    )
-                html += "</tbody></table>"
+                for source in sources:
+                    source_posts = grouped_posts.get(source, [])
+                    html += f"<h3 style='background-color: #f8f9fa; padding: 10px; border-left: 5px solid #1a73e8;'>{source} Announcements</h3>"
+                    
+                    if not source_posts:
+                        html += f"<p style='color: #70757a; margin-left: 10px;'>No new updates found.</p>"
+                        continue
 
-            html += "<br/><p style='color: grey;'>This email was sent automatically.</p>"
+                    html += "<table border='1' cellpadding='8' style='border-collapse: collapse; width: 100%; font-size: 14px; margin-bottom: 20px;'>"
+                    html += "<thead><tr style='background-color: #f2f2f2;'><th style='width:110px;'>Date</th><th>Title</th><th style='width:80px;'>Link</th></tr></thead>"
+                    html += "<tbody>"
+                    for post in source_posts:
+                        html += (
+                            f"<tr>"
+                            f"<td style='white-space: nowrap; text-align: center;'>{post['date']}</td>"
+                            f"<td>{post['title']}</td>"
+                            f"<td style='text-align: center;'><a href='{post['url']}' style='color: #1a73e8;'>바로가기</a></td>"
+                            f"</tr>"
+                        )
+                    html += "</tbody></table>"
+
+            html += "<br/><p style='color: grey; font-size: 12px;'>This email was sent automatically.</p>"
 
             msg.attach(MIMEText(html, "html"))
 
