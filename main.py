@@ -7,7 +7,7 @@ import json
 import sys
 
 STATE_FILE = "last_ids.json"
-LOOKBACK_DAYS = 3
+LOOKBACK_DAYS = 10
 
 
 def get_last_ids():

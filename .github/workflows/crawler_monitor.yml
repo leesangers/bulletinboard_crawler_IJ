@@ -1,8 +1,8 @@
-name: Bulletin Board Crawler Service
+name: FDA Press Announcements Monitor
 
 on:
   schedule:
-    - cron: '14 1 * * *' # 10:14 AM KST
+    - cron: '55 23 * * 0-4' # 08:55 KST Mon-Fri (UTC 23:55 Sun-Thu)
   workflow_dispatch: {}
 
 jobs:

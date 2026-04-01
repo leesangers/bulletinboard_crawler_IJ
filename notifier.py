@@ -41,17 +41,17 @@ class EmailNotifier:
             if fda_error:
                 html += "<p style='color: #d93025; font-weight: bold;'>⚠️ Failed to fetch data from the FDA website. Please check the crawler.</p>"
             elif not posts:
-                html += "<p style='color: #70757a;'>No new press announcements in the last 3 days.</p>"
+                html += "<p style='color: #70757a;'>No new press announcements in the last 10 days.</p>"
             else:
-                html += "<table border='1' cellpadding='5' style='border-collapse: collapse; width: 100%;'>"
-                html += "<thead><tr style='background-color: #f2f2f2;'><th>Date</th><th>Title</th></tr></thead>"
+                html += "<table border='1' cellpadding='8' style='border-collapse: collapse; width: 100%; font-size: 14px;'>"
+                html += "<thead><tr style='background-color: #f2f2f2;'><th style='width:110px;'>Date</th><th>Title</th><th>Link</th></tr></thead>"
                 html += "<tbody>"
                 for post in posts:
-                    link_style = "color: #1a73e8; text-decoration: none; font-weight: bold;"
                     html += (
                         f"<tr>"
-                        f"<td style='white-space: nowrap;'>{post['date']}</td>"
-                        f"<td><a href='{post['url']}' style='{link_style}'>{post['title']}</a></td>"
+                        f"<td style='white-space: nowrap; text-align: center;'>{post['date']}</td>"
+                        f"<td>{post['title']}</td>"
+                        f"<td style='text-align: center;'><a href='{post['url']}' style='color: #1a73e8;'>바로가기</a></td>"
                         f"</tr>"
                     )
                 html += "</tbody></table>"
