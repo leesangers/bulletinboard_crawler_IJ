@@ -1,4 +1,4 @@
-name: FDA Press Announcements Monitor
+name: Press Announcements Monitor (FDA & MFDS)
 
 on:
   schedule:

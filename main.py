@@ -1,5 +1,5 @@
 from datetime import datetime, timedelta
-from crawler import FdaCrawler
+from crawler import RssCrawler
 from notifier import EmailNotifier
 
 import os
@@ -8,6 +8,9 @@ import sys
 
 STATE_FILE = "last_ids.json"
 LOOKBACK_DAYS = 10
+
+FDA_RSS_URL = "https://www.fda.gov/about-fda/contact-fda/stay-informed/rss-feeds/press-releases/rss.xml"
+MFDS_RSS_URL = "http://www.mfds.go.kr/www/rss/brd.do?brdId=ntc0004"
 
 
 def get_last_ids():
@@ -26,34 +29,43 @@ def save_last_ids(ids_dict):
 
 
 def main():
-    print(f"Starting FDA Press Announcements Monitor (last {LOOKBACK_DAYS} days)...")
+    print(f"Starting Press Announcements Monitor (last {LOOKBACK_DAYS} days)...")
 
-    crawler = FdaCrawler()
+    fda_crawler = RssCrawler(FDA_RSS_URL, "FDA")
+    mfds_crawler = RssCrawler(MFDS_RSS_URL, "MFDS")
     notifier = EmailNotifier()
     last_ids = get_last_ids()
 
-    posts = crawler.fetch_posts()
+    fda_posts = fda_crawler.fetch_posts()
+    mfds_posts = mfds_crawler.fetch_posts()
 
-    if posts is None:
-        print("CRITICAL: Failed to fetch FDA posts.")
+    if fda_posts is None and mfds_posts is None:
+        print("CRITICAL: Failed to fetch both FDA and MFDS posts.")
         success = notifier.send_notification([], fda_error=True)
         if not success:
             sys.exit(1)
         return
 
+    all_posts = (fda_posts or []) + (mfds_posts or [])
+
     # Filter posts within the lookback window
     cutoff = (datetime.now() - timedelta(days=LOOKBACK_DAYS)).date()
-    new_posts = [p for p in posts if p["date"] >= cutoff]
+    new_posts = [p for p in all_posts if p["date"] >= cutoff]
 
-    # Update state with the newest post id
-    if posts:
-        last_ids["fda"] = posts[0]["id"]
+    # Sort by date descending
+    new_posts.sort(key=lambda x: x["date"], reverse=True)
+
+    # Update state with the newest post ids
+    if fda_posts:
+        last_ids["fda"] = fda_posts[0]["id"]
+    if mfds_posts:
+        last_ids["mfds"] = mfds_posts[0]["id"]
 
     for post in new_posts:
         print(f"- [{post['source']}] {post['date']} | {post['title']}")
         print(f"  {post['url']}")
 
-    print(f"Found {len(new_posts)} post(s) within the last {LOOKBACK_DAYS} days.")
+    print(f"Found {len(new_posts)} total post(s) within the last {LOOKBACK_DAYS} days.")
 
     success = notifier.send_notification(new_posts)
     if not success:

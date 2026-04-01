@@ -30,25 +30,26 @@ class EmailNotifier:
             msg["To"] = self.email_user
 
             if fda_error:
-                msg["Subject"] = "[FDA Alert] Error fetching press announcements"
+                msg["Subject"] = "[Alert] Error fetching press announcements"
             elif posts:
-                msg["Subject"] = f"[FDA Alert] {len(posts)} new press announcement(s)"
+                msg["Subject"] = f"[Alert] {len(posts)} new press announcement(s)"
             else:
-                msg["Subject"] = "[FDA Alert] No new press announcements"
+                msg["Subject"] = "[Alert] No new press announcements"
 
             html = "<h2>FDA Press Announcements Monitor</h2>"
 
             if fda_error:
-                html += "<p style='color: #d93025; font-weight: bold;'>⚠️ Failed to fetch data from the FDA website. Please check the crawler.</p>"
+                html += "<p style='color: #d93025; font-weight: bold;'>⚠️ Failed to fetch data from the RSS feeds. Please check the crawler.</p>"
             elif not posts:
                 html += "<p style='color: #70757a;'>No new press announcements in the last 10 days.</p>"
             else:
                 html += "<table border='1' cellpadding='8' style='border-collapse: collapse; width: 100%; font-size: 14px;'>"
-                html += "<thead><tr style='background-color: #f2f2f2;'><th style='width:110px;'>Date</th><th>Title</th><th>Link</th></tr></thead>"
+                html += "<thead><tr style='background-color: #f2f2f2;'><th style='width:80px;'>Source</th><th style='width:110px;'>Date</th><th>Title</th><th>Link</th></tr></thead>"
                 html += "<tbody>"
                 for post in posts:
                     html += (
                         f"<tr>"
+                        f"<td style='text-align: center;'>{post['source']}</td>"
                         f"<td style='white-space: nowrap; text-align: center;'>{post['date']}</td>"
                         f"<td>{post['title']}</td>"
                         f"<td style='text-align: center;'><a href='{post['url']}' style='color: #1a73e8;'>바로가기</a></td>"
