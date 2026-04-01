@@ -1,164 +1,80 @@
 import requests
-from requests.adapters import HTTPAdapter
-from urllib3.util.retry import Retry
-from bs4 import BeautifulSoup
+from xml.etree import ElementTree as ET
+from email.utils import parsedate_to_datetime
+from datetime import datetime, timezone
 import re
-import time
-import random
 
-class KofairCrawler:
-    BASE_URL = "https://www.kofair.or.kr"
 
-    def __init__(self, menu_cd="000064"):
-        self.menu_cd = menu_cd
-        self.list_url = f"{self.BASE_URL}/home/board/brdList.do?menu_cd={self.menu_cd}"
-        self.detail_url_template = f"{self.BASE_URL}/home/board/brdDetail.do?menu_cd={self.menu_cd}&num={{}}"
-        self.headers = {
-            "User-Agent": "Mozilla/5.0 (Windows NT 10.0; Win64; x64) AppleWebKit/537.36 (KHTML, like Gecko) Chrome/120.0.0.0 Safari/537.36"
-        }
-
-    def fetch_posts(self):
-        """
-        Fetches the list of posts from the board (JSON response).
-        Returns a list of dictionaries containing post info.
-        """
-        try:
-            response = requests.get(self.list_url, headers=self.headers, timeout=10)
-            response.raise_for_status()
-            
-            data = response.json()
-            board_list = data.get("brdList", [])
-            
-            posts = []
-            for item in board_list:
-                post_num = str(item.get("num"))
-                title = item.get("title", "")
-                date = item.get("write_dt", "")
-                
-                posts.append({
-                    "id": post_num,
-                    "title": title,
-                    "date": date,
-                    "url": self.detail_url_template.format(post_num),
-                    "source": "KOFAIR"
-                })
-            
-            # Handle notices if needed from fstBrdList
-            fst_list = data.get("fstBrdList", [])
-            notice_ids = [str(i.get("num")) for i in fst_list]
-            for post in posts:
-                if post["id"] in notice_ids:
-                    post["title"] = f"[공지] {post['title']}"
-
-            return posts
-        except Exception as e:
-            print(f"Error fetching KOFAIR posts ({self.menu_cd}): {e}")
-            return None
-
-class MssCrawler:
-    BASE_URL = "https://www.mss.go.kr"
-    LIST_URL = f"{BASE_URL}/site/smba/ex/bbs/List.do?cbIdx=310"
-    DETAIL_URL_TEMPLATE = f"{BASE_URL}/site/smba/ex/bbs/View.do?cbIdx=310&bcIdx={{}}"
+class FdaCrawler:
+    RSS_URL = "https://www.fda.gov/about-fda/contact-fda/stay-informed/rss-feeds/press-releases/rss.xml"
 
     def __init__(self):
-        self.headers = {
-            "User-Agent": "Mozilla/5.0 (Windows NT 10.0; Win64; x64) AppleWebKit/537.36 (KHTML, like Gecko) Chrome/124.0.0.0 Safari/537.36",
-            "Accept": "text/html,application/xhtml+xml,application/xml;q=0.9,image/avif,image/webp,image/apng,*/*;q=0.8",
-            "Accept-Language": "ko-KR,ko;q=0.9,en-US;q=0.8,en;q=0.7",
-            "Referer": "https://www.google.com/",
-            "Cache-Control": "max-age=0",
-            "Connection": "keep-alive",
-            "Upgrade-Insecure-Requests": "1"
-        }
-        self.session = requests.Session()
-        retry_strategy = Retry(
-            total=3,
-            backoff_factor=2,
-            status_forcelist=[429, 500, 502, 503, 504],
-        )
-        adapter = HTTPAdapter(max_retries=retry_strategy)
-        self.session.mount("https://", adapter)
-        self.session.mount("http://", adapter)
+        self.headers = {"User-Agent": "curl/7.88.1"}
 
     def fetch_posts(self):
         """
-        Fetches the list of posts from the MSS board.
-        Returns a list of dictionaries containing post info.
+        Fetches FDA press announcements via RSS feed.
+        Returns a list of dicts: {id, title, description, date (datetime.date), url, source}
         """
         try:
-            # Add a small random delay to avoid bot detection patterns
-            time.sleep(random.uniform(1, 4))
-            
-            response = self.session.get(self.LIST_URL, headers=self.headers, timeout=20)
+            response = requests.get(self.RSS_URL, headers=self.headers, timeout=30)
             response.raise_for_status()
-            
-            soup = BeautifulSoup(response.text, "html.parser")
-            # Try finding the table more generically
-            table = soup.select_one("table.board-list")
-            if not table:
-                table = soup.find("table", {"summary": re.compile("공지사항")})
-            
-            if not table:
-                # Fallback to the first table if others fail
-                table = soup.find("table")
 
-            if not table:
-                print("  No table found on MSS page.")
+            root = ET.fromstring(response.content)
+            channel = root.find("channel")
+            if channel is None:
+                print("No <channel> found in RSS feed.")
                 return []
-            
-            rows = table.select("tbody tr")
+
             posts = []
-            for row in rows:
-                # Find the subject link - could be 'a.pc-detail' or just an anchor in a subject cell
-                subject_link = row.select_one("a.pc-detail") or row.select_one("td.subject a") or row.select_one("a")
-                if not subject_link:
+            for item in channel.findall("item"):
+                title = (item.findtext("title") or "").strip()
+                url = (item.findtext("link") or "").strip()
+                description = (item.findtext("description") or "").strip()
+                pub_date_str = (item.findtext("pubDate") or "").strip()
+
+                if not title or not url:
                     continue
-                
-                title = subject_link.get_text(strip=True)
-                if not title:
+
+                post_date = self._parse_date(pub_date_str)
+                if post_date is None:
                     continue
-                
-                # Extract bcIdx from onclick: doBbsFView('310', '1066313', ...)
-                onclick_text = subject_link.get("onclick", "") or row.get("onclick", "")
-                match = re.search(r"doBbsFView\(\s*'(\d+)'\s*,\s*'(\d+)'", onclick_text)
-                if not match:
-                    # Try a more relaxed regex
-                    match = re.search(r"doBbsFView\([^,]+,\s*'(\d+)'", onclick_text)
-                
-                if not match:
-                    continue
-                
-                # The second ID is usually the bc_idx
-                bc_idx = match.group(2) if match.lastindex >= 2 else match.group(1)
-                
-                # Date is usually in the 4th column (index 3)
-                tds = row.find_all("td")
-                date = ""
-                if len(tds) > 3:
-                    date = tds[3].get_text(strip=True)
-                
+
+                # Use URL slug as unique ID
+                post_id = url.rstrip("/").split("/")[-1]
+
                 posts.append({
-                    "id": bc_idx,
+                    "id": post_id,
                     "title": title,
-                    "date": date,
-                    "url": self.DETAIL_URL_TEMPLATE.format(bc_idx),
-                    "source": "MSS"
+                    "description": description,
+                    "date": post_date,
+                    "url": url,
+                    "source": "FDA",
                 })
-            
+
             return posts
+
         except Exception as e:
-            print(f"CRITICAL ERROR fetching MSS posts: {type(e).__name__}: {e}")
+            print(f"Error fetching FDA RSS feed: {e}")
             return None
 
-if __name__ == "__main__":
-    print("--- Testing KOFAIR Crawler ---")
-    k_crawler = KofairCrawler()
-    k_posts = k_crawler.fetch_posts()
-    for post in k_posts[:3]:
-        print(f"[{post['source']}] {post['id']}: {post['title']} ({post['date']})")
+    def _parse_date(self, date_str):
+        """Parse RFC 2822 date string (e.g. 'Thu, 26 Mar 2026 18:47:15 EDT') to datetime.date."""
+        try:
+            dt = parsedate_to_datetime(date_str)
+            return dt.date()
+        except Exception:
+            return None
 
-    print("\n--- Testing MSS Crawler ---")
-    m_crawler = MssCrawler()
-    m_posts = m_crawler.fetch_posts()
-    for post in m_posts[:3]:
-        print(f"[{post['source']}] {post['id']}: {post['title']} ({post['date']})")
+
+if __name__ == "__main__":
+    crawler = FdaCrawler()
+    posts = crawler.fetch_posts()
+    if posts:
+        print(f"Total posts fetched: {len(posts)}")
+        for post in posts[:5]:
+            print(f"\n[{post['source']}] {post['date']}")
+            print(f"  {post['title']}")
+            print(f"  {post['url']}")
+    else:
+        print("No posts found or error occurred.")
