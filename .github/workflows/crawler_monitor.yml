@@ -3,6 +3,7 @@ name: FDA Press Announcements Monitor
 on:
   schedule:
     - cron: '55 23 * * 0-4' # 08:55 KST Mon-Fri (UTC 23:55 Sun-Thu)
+    - cron: '55 3 * * 1-5'  # 12:55 KST Mon-Fri (UTC 03:55 Mon-Fri)
   workflow_dispatch: {}
 
 jobs:
