@@ -10,7 +10,8 @@ class EmailNotifier:
         self.port = port
         self.email_user = os.getenv("EMAIL_USER")
         self.email_pw = os.getenv("EMAIL_APP_PASSWORD")
-        self.recipient_email = os.getenv("RECIPIENT_EMAIL")
+        # Use sos@k-gmp.com as the default recipient
+        self.recipient_email = os.getenv("RECIPIENT_EMAIL") or "sos@k-gmp.com"
 
     def send_notification(self, posts, fda_error=False):
         """

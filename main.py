@@ -1,4 +1,4 @@
-from datetime import datetime, timedelta
+from datetime import datetime, timedelta, timezone
 from crawler import RssCrawler
 from notifier import EmailNotifier
 
@@ -8,14 +8,20 @@ import sys
 
 STATE_FILE = "last_ids.json"
 
+def get_kst_now():
+    # KST is UTC+9
+    return datetime.now(timezone(timedelta(hours=9)))
+
 def get_lookback_days():
     """
-    Monday (0), Sunday (6), Saturday (5) -> 3 days
-    Other days -> 1 day
+    Weekday (Mon-Fri) -> 1 (Total 2 days: Today + Yesterday)
+    Weekend (Sat-Sun) -> 2 (Total 3 days: Today + 2 days ago)
     """
-    weekday = datetime.now().weekday()
-    if weekday in [0, 5, 6]:
-        return 3
+    now_kst = get_kst_now()
+    weekday = now_kst.weekday()
+    # 0: Mon, 1: Tue, 2: Wed, 3: Thu, 4: Fri, 5: Sat, 6: Sun
+    if weekday >= 5:  # Saturday or Sunday
+        return 2
     return 1
 
 LOOKBACK_DAYS = get_lookback_days()
@@ -40,7 +46,8 @@ def save_last_ids(ids_dict):
 
 
 def main():
-    print(f"Starting Press Announcements Monitor (last {LOOKBACK_DAYS} days)...")
+    now_kst = get_kst_now()
+    print(f"Starting Press Announcements Monitor (KST: {now_kst.strftime('%Y-%m-%d %H:%M:%S')}, last {LOOKBACK_DAYS+1} days)...")
 
     fda_crawler = RssCrawler(FDA_RSS_URL, "FDA")
     mfds_crawler = RssCrawler(MFDS_RSS_URL, "MFDS")
@@ -60,7 +67,7 @@ def main():
     all_posts = (fda_posts or []) + (mfds_posts or [])
 
     # Filter posts within the lookback window
-    cutoff = (datetime.now() - timedelta(days=LOOKBACK_DAYS)).date()
+    cutoff = (now_kst - timedelta(days=LOOKBACK_DAYS)).date()
     new_posts = [p for p in all_posts if p["date"] >= cutoff]
 
     # Sort by date descending
