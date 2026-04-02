@@ -25,7 +25,7 @@ class EmailNotifier:
         recipients = [r.strip() for r in self.recipient_email.split(",") if r.strip()]
 
         # Group posts by source
-        sources = ["FDA", "MFDS"]
+        sources = ["FDA", "MFDS", "EFSA", "FSA", "TH_FDA"]
         grouped_posts = {s: [] for s in sources}
         if posts:
             for p in posts:
